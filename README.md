@@ -29,6 +29,7 @@ This framework supports:
 - Unity shoud publishes EE poses and control commands to ROS  
 - ROS publishes robot state back to Unity "/joint_states"
 - Soft real‑time teleoperation suitable for teaching and visualization
+- **DragToTeach**: Kinesthetic teaching using VR controller relative movement (servo control).
 
 
 ## 🚀 Getting Started
@@ -88,6 +89,8 @@ ros2 run panda_unity_interface dummy_mission
 | Topic | Type | Description |
 |-------|------|-------------|
 | `/mission_command` | `panda_unity_interface_msgs/Mission` | Full mission path (Waypoint[]) |
+| `/vr_controller_delta` | `geometry_msgs/Twist` | Relative VR controller movement for DragToTeach |
+| `/teach_mode` | `std_msgs/Bool` | Enable/Disable DragToTeach mode (triggers servo start/stop) |
 
 ### ROS → Unity
 

@@ -4,9 +4,11 @@ from threading import Thread
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Twist
+from std_msgs.msg import Bool
+from std_srvs.srv import Trigger
 from panda_unity_interface_msgs.msg import Waypoint, Mission
-from pymoveit2 import MoveIt2, GripperInterface
+from pymoveit2 import MoveIt2, GripperInterface, MoveIt2Servo
 from pymoveit2.robots import panda as robot
 
 
@@ -58,6 +60,38 @@ class FrankaMoveitController(Node):
             gripper_group_name=robot.MOVE_GROUP_GRIPPER,
             callback_group=callback_group,
             gripper_command_action_name="gripper_action_controller/gripper_cmd",
+        )
+
+        # DragToTeach State
+        self.is_teaching = False
+        
+        # Initialize MoveIt2Servo
+        self.servo = MoveIt2Servo(
+            node=self,
+            frame_id=base_link_name,
+            callback_group=callback_group,
+        )
+
+        # Subscriber for VR Controller Delta (Twist)
+        self.delta_subscription = self.create_subscription(
+            Twist,
+            'vr_controller_delta',
+            self.delta_callback,
+            10,
+            callback_group=callback_group
+        )
+
+        # Servo Service Clients
+        self.servo_start_client = self.create_client(Trigger, '/servo_node/start_servo', callback_group=callback_group)
+        self.servo_stop_client = self.create_client(Trigger, '/servo_node/stop_servo', callback_group=callback_group)
+        
+        # Subscriber for Teach Mode (Bool)
+        self.teach_mode_subscription = self.create_subscription(
+            Bool,
+            'teach_mode',
+            self.teach_mode_callback,
+            10,
+            callback_group=callback_group
         )
         
         # Set velocity and acceleration scaling
@@ -220,6 +254,64 @@ class FrankaMoveitController(Node):
                               f'y={pose.orientation.y:.4f}, '
                               f'z={pose.orientation.z:.4f}, '
                               f'w={pose.orientation.w:.4f}')
+
+    def teach_mode_callback(self, msg):
+        """Handle teach mode toggle"""
+        if msg.data:
+            if not self.is_teaching:
+                self.get_logger().info('Entering Teach Mode')
+                # Start Servo
+                if self.servo_start_client.wait_for_service(timeout_sec=1.0):
+                    req = Trigger.Request()
+                    future = self.servo_start_client.call_async(req)
+                    # We don't wait for result to avoid blocking, assuming success
+                else:
+                    self.get_logger().warn('Servo start service not available')
+                
+                self.is_teaching = True
+        else:
+            if self.is_teaching:
+                self.get_logger().info('Exiting Teach Mode')
+                self.is_teaching = False
+                
+                # Stop servo motion
+                self.servo(linear=[0.0, 0.0, 0.0], angular=[0.0, 0.0, 0.0])
+
+                # Stop Servo Node
+                if self.servo_stop_client.wait_for_service(timeout_sec=1.0):
+                    req = Trigger.Request()
+                    future = self.servo_stop_client.call_async(req)
+                else:
+                    self.get_logger().warn('Servo stop service not available')
+                
+                # Move to Home
+                self.move_to_home()
+
+    def delta_callback(self, msg):
+        """Handle incoming relative movement from VR controller"""
+        if not self.is_teaching:
+            return
+
+        # Pass command to servo
+        # Twist msg has Vector3 linear and Vector3 angular
+        self.servo(
+            linear=[msg.linear.x, msg.linear.y, msg.linear.z],
+            angular=[msg.angular.x, msg.angular.y, msg.angular.z]
+        )
+
+    def move_to_home(self):
+        """Move to a predefined Home configuration"""
+        self.get_logger().info('Moving to Home position...')
+        # Define a home configuration (example joint positions)
+        # Verify these are safe for FR3!
+        home_joints = [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785] 
+        
+        try:
+            self.moveit2.move_to_configuration(home_joints)
+            self.moveit2.wait_until_executed()
+            self.get_logger().info('Reached Home position.')
+        except Exception as e:
+            self.get_logger().error(f'Failed to move to Home: {e}')
 
 
 def main():
