@@ -91,6 +91,7 @@ ros2 run panda_unity_interface dummy_mission
 | `/mission_command` | `panda_unity_interface_msgs/Mission` | Full mission path (Waypoint[]) |
 | `/vr_controller_delta` | `geometry_msgs/Twist` | Relative VR controller movement for DragToTeach |
 | `/teach_mode` | `std_msgs/Bool` | Enable/Disable DragToTeach mode (triggers servo start/stop) |
+| `/move_to_home` | `std_msgs/Bool` | Trigger robot move to defined home configuration |
 
 ### ROS → Unity
 

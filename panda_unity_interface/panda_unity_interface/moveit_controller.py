@@ -94,6 +94,14 @@ class FrankaMoveitController(Node):
             callback_group=callback_group
         )
         
+        self.move_to_home_subscription = self.create_subscription(
+            Bool,
+            'move_to_home',
+            self.move_to_home_callback,
+            10,
+            callback_group=callback_group
+        )
+
         # Set velocity and acceleration scaling
         self.moveit2.max_velocity = 0.5
         self.moveit2.max_acceleration = 0.5
@@ -121,6 +129,11 @@ class FrankaMoveitController(Node):
         self.get_logger().info('  2 - Open Gripper')
         self.get_logger().info('  3 - Close Gripper')
         self.get_logger().info('==============================================')
+    
+    def move_to_home_callback(self, msg):
+        """Handle incoming move to home commands"""
+        if msg.data:
+            self.move_to_home()
     
     def command_callback(self, msg):
         """Handle incoming waypoint commands"""
