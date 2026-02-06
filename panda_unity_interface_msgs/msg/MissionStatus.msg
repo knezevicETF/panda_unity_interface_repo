@@ -1,0 +1,7 @@
+std_msgs/Bool gripper_open_started
+std_msgs/Bool gripper_open_completed
+std_msgs/Bool gripper_close_started
+std_msgs/Bool gripper_close_completed
+std_msgs/Bool movement_started
+std_msgs/Bool movement_completed
+std_msgs/Bool movement_failed

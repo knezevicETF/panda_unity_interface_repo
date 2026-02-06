@@ -22,6 +22,8 @@ setup(
         'console_scripts': [
                     'moveit_controller = panda_unity_interface.moveit_controller:main',
                     'dummy_mission = panda_unity_interface.dummy_mission:main',
+                    'test_controller = panda_unity_interface.test_cotroller:main',
+                    'test_controller = panda_unity_interface.test_controller:main',
 
         ],
     },
