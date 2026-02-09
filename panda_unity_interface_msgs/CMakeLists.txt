@@ -16,6 +16,7 @@ find_package(geometry_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Waypoint.msg"
   "msg/Mission.msg"
+  "msg/MissionStatus.msg"
   DEPENDENCIES geometry_msgs
 )
 
