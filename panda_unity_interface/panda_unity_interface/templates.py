@@ -94,3 +94,12 @@ CLOSE_GRIPPER_TEMPLATE = """
         gripper.close()
         gripper.wait_until_executed()
 """
+
+JOINT_MOVE_TEMPLATE = """
+        # Joint Move Action
+        node.get_logger().info("Executing Joint Move...")
+        joint_positions = [{j0}, {j1}, {j2}, {j3}, {j4}, {j5}, {j6}]
+        
+        moveit2.move_to_configuration(joint_positions=joint_positions)
+        moveit2.wait_until_executed()
+"""
