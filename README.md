@@ -9,7 +9,7 @@ This framework supports:
 - Real‑time Unity → ROS teleoperation of the end‑effector  
 - Path recording and playback (teaching by demonstration)  
 - Bidirectional ROS ↔ Unity communication
-- **Safety Zones** and **Mission Status** feedback
+- **Safety Zones** and **Comprehensive Mission Status** feedback (movement, gripper, mission completion, teach mode)
 
 ## 📦 Features
 
@@ -29,7 +29,7 @@ This framework supports:
 - **Node Isolation**: Dedicated nodes (`_moveit_node`, `_gripper_node`, `_servo_node`) prevent executor conflicts.
 - Easy scripting: joint space, pose goals, Cartesian paths  
 - Gripper and servo examples included
-- **Mission Feedback**: Publishes detailed status of mission execution, including failures and potential safety stops.
+- **Mission Feedback**: Publishes detailed status of mission execution, including failures, safety stops, mission completion, move home completion, and teach mode state changes.
 
 ### 🎮 Unity Integration 
 
@@ -114,7 +114,7 @@ ros2 run panda_unity_interface test_controller
 | Topic | Type | Description |
 |-------|------|-------------|
 | `/joint_states` | `sensor_msgs/JointState` | Current robot joints pose |
-| `/mission_execution` | `panda_unity_interface_msgs/MissionStatus` | Real-time status: movement start/end, failure, gripper action states |
+| `/mission_execution` | `panda_unity_interface_msgs/MissionStatus` | Real-time status: movement start/end, failure, gripper actions, mission completion, move home completion, teach mode state changes |
 
 
 ## 📄 License

@@ -93,6 +93,10 @@ class RosBridge(Node):
                 "gripper_open_completed": bool(msg.gripper_open_completed.data),
                 "gripper_close_started": bool(msg.gripper_close_started.data),
                 "gripper_close_completed": bool(msg.gripper_close_completed.data),
+                "mission_completed": bool(msg.mission_completed.data),
+                "move_home_completed": bool(msg.move_home_completed.data),
+                "teach_mode_started": bool(msg.teach_mode_started.data),
+                "teach_mode_completed": bool(msg.teach_mode_completed.data),
                 "stamp": time.time(),
             }
 

@@ -5,3 +5,7 @@ std_msgs/Bool gripper_close_completed
 std_msgs/Bool movement_started
 std_msgs/Bool movement_completed
 std_msgs/Bool movement_failed
+std_msgs/Bool mission_completed
+std_msgs/Bool move_home_completed
+std_msgs/Bool teach_mode_started
+std_msgs/Bool teach_mode_completed

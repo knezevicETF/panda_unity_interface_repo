@@ -217,6 +217,10 @@ class FrankaMoveitController(Node):
         msg.gripper_open_completed.data = kwargs.get("gripper_open_completed", False)
         msg.gripper_close_started.data = kwargs.get("gripper_close_started", False)
         msg.gripper_close_completed.data = kwargs.get("gripper_close_completed", False)
+        msg.mission_completed.data = kwargs.get("mission_completed", False)
+        msg.move_home_completed.data = kwargs.get("move_home_completed", False)
+        msg.teach_mode_started.data = kwargs.get("teach_mode_started", False)
+        msg.teach_mode_completed.data = kwargs.get("teach_mode_completed", False)
         self.mission_execution_publisher.publish(msg)
 
     def _stop_servo_motion(self):
@@ -344,6 +348,7 @@ class FrankaMoveitController(Node):
                 self.get_logger().info("Entering Teach Mode")
                 self._start_servo_node()
                 self.is_teaching = True
+                self.publish_mission_status(teach_mode_started=True)
         else:
             if self.is_teaching:
                 self.get_logger().info("Exiting Teach Mode")
@@ -353,6 +358,7 @@ class FrankaMoveitController(Node):
                 self._stop_servo_node()
 
                 self.move_to_home()
+                self.publish_mission_status(teach_mode_completed=True)
 
     def delta_callback(self, msg: Twist):
         """Handle incoming relative movement from VR controller."""
@@ -454,6 +460,7 @@ class FrankaMoveitController(Node):
 
                 else:
                     self.get_logger().warn(f"Unknown action type: {waypoint.type}")
+            self.publish_mission_status(mission_completed=True)
         except Exception as e:
             self.get_logger().error(f"Mission failed: {e}")
             self.publish_mission_status(movement_failed=True)
@@ -672,6 +679,7 @@ class FrankaMoveitController(Node):
             self.moveit2.move_to_configuration(joint_positions=home_joints)
             self.moveit2.wait_until_executed()
             self.get_logger().info("Reached Home position.")
+            self.publish_mission_status(move_home_completed=True)
         except Exception as e:
             self.get_logger().error(f"Failed to move to Home: {e}")
 
