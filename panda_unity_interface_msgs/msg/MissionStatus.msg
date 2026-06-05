@@ -9,3 +9,4 @@ std_msgs/Bool mission_completed
 std_msgs/Bool move_home_completed
 std_msgs/Bool teach_mode_started
 std_msgs/Bool teach_mode_completed
+std_msgs/Bool mission_failed

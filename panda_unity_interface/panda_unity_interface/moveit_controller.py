@@ -218,6 +218,7 @@ class FrankaMoveitController(Node):
         msg.gripper_close_started.data = kwargs.get("gripper_close_started", False)
         msg.gripper_close_completed.data = kwargs.get("gripper_close_completed", False)
         msg.mission_completed.data = kwargs.get("mission_completed", False)
+        msg.mission_failed.data = kwargs.get("mission_failed",False)
         msg.move_home_completed.data = kwargs.get("move_home_completed", False)
         msg.teach_mode_started.data = kwargs.get("teach_mode_started", False)
         msg.teach_mode_completed.data = kwargs.get("teach_mode_completed", False)
@@ -390,18 +391,11 @@ class FrankaMoveitController(Node):
     def _execute_mission_thread(self, msg: Mission):
         """
         Actual blocking execution logic running in a separate thread.
+        Aborts the entire mission if any waypoint fails.
         """
         if not self._can_execute_motion():
             self.publish_mission_status(movement_failed=True)
             return
-
-        # Double-check lock (should typically succeed if callback checked, but race possible)
-        # We use a blocking acquire here because we are already in a background thread
-        # and we want to ensure exclusive access.
-        # if not self._mission_lock.acquire(timeout=1.0):
-        #     self.get_logger().warn("Could not acquire mission lock in thread.")
-        #     self.publish_mission_status(movement_failed=True)
-        #     return
 
         try:
             for idx, waypoint in enumerate(msg.waypoints):
@@ -459,13 +453,24 @@ class FrankaMoveitController(Node):
                     )
 
                 else:
-                    self.get_logger().warn(f"Unknown action type: {waypoint.type}")
+                    self.get_logger().warn(f"Unknown action type: {waypoint.type}. Aborting mission.")
+                    self.publish_mission_status(movement_failed=True)
+                    return
+
+                # --- ABORT on any waypoint failure ---
+                if not ok:
+                    self.get_logger().error(
+                        f"Waypoint[{idx}] (type={waypoint.type}) failed. Aborting mission."
+                    )
+                    self.publish_mission_status(mission_failed=True)
+                    return  # movement_failed already published above
+
             self.publish_mission_status(mission_completed=True)
+
         except Exception as e:
-            self.get_logger().error(f"Mission failed: {e}")
+            self.get_logger().error(f"Mission failed with exception: {e}")
             self.publish_mission_status(movement_failed=True)
         finally:
-            # self._mission_lock.release()
             pass
 
     # -------------------------
@@ -506,6 +511,7 @@ class FrankaMoveitController(Node):
 
             self.get_logger().info("Executing joint space motion...")
             execution = self.moveit2.move_to_configuration(joint_positions=joint_positions)
+            print(execution)
             self.moveit2.wait_until_executed()
 
             self.get_logger().info("MoveJ completed successfully!")
@@ -520,6 +526,8 @@ class FrankaMoveitController(Node):
 
         finally:
             self.get_logger().info("=" * 50)
+
+    CARTESIAN_FRACTION_THRESHOLD = 0.99  # Require 99% of path to be reachable
 
     def move_l(self, target_pose) -> bool:
         """MoveL: Cartesian linear motion to pose."""
@@ -546,6 +554,34 @@ class FrankaMoveitController(Node):
             ]
 
             self.get_logger().info("Computing Cartesian path...")
+            
+            # Step 1: IK pre-validation — cheaply check workspace reachability
+            # before committing to a full Cartesian plan.
+            self.get_logger().info("Validating target pose via IK...")
+            joint_state = self.moveit2.compute_ik(position, quat_xyzw)
+            if joint_state is None:
+                self.get_logger().error(
+                    "MoveL aborted: IK has no solution for target pose. "
+                    "Target is outside robot workspace."
+                )
+                return False
+            self.get_logger().info("IK valid. Planning Cartesian path...")
+
+            # Step 2: Plan only — do NOT execute yet.
+            # plan() returns None when the planner cannot produce a trajectory.
+            trajectory = self.moveit2.plan(
+                position=position,
+                quat_xyzw=quat_xyzw,
+                cartesian=True,
+            )
+
+            if trajectory is None:
+                self.get_logger().error(
+                    "MoveL aborted: Cartesian path planning failed (no trajectory). "
+                    "Target pose may be unreachable along a straight Cartesian line."
+                )
+                return False
+                
             execution = self.moveit2.move_to_pose(
                 position=position,
                 quat_xyzw=quat_xyzw,
@@ -708,3 +744,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
